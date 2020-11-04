@@ -1,0 +1,12 @@
+#
+# List of the properties and their default values
+#
+
+# Disable System Tracing, what is automatically enabled after the developer menu is activated
+com.android.traceur=enabled
+
+# Disable OnePlus logging and bug reporting
+net.oneplus.odm=enabled
+
+# Disable Zen Mode
+com.oneplus.brickmode=enabled

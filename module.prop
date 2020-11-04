@@ -1,0 +1,6 @@
+id=opbs
+name=OnePlus Battery Saver
+version=v1
+versionCode=0
+author=peterroth
+description=Disable unused or not necessary packages and logging to save some battery on OnePlus devices.

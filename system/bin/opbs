@@ -1,0 +1,210 @@
+#!/system/bin/sh
+
+MODDIR="/data/adb/modules/opbs";
+prop=$MODDIR/opbs.prop;
+finalfile="/data/adb/service.d/opbatterysaver.sh"
+stashedchanges=0;
+
+# Let's check if root access is granted
+ls /data > /dev/null 2>&1 || { echo "OnePlus Battery Saver requires root privilege!"; echo "First, run 'su' then 'opbs'"; exit 1; }
+
+#
+# Let's create useful functions
+#
+
+# Read values from the OPBatterySaver.prop file
+get_file_prop() {
+	_prop=$(grep "$1=" $prop)
+	value=${_prop#*=}
+	echo $value
+	unset _prop
+}
+
+# Change values in the opbs.prop file
+# We will use that later to generate the startup script
+set_file_prop() {
+	_prop=$3
+	sed -i "s/${1}=.*/${1}=${2}/g" $_prop
+	unset _prop
+}
+
+# Fancy menu for user friendly navigation
+menu() {
+	clear;
+	echo " What would you like to change?"
+	echo ""
+	echo "  1 - System Tracing"
+	echo "  2 - OnePlus logging and bug reporting"
+	echo "  3 - Zen Mode"
+	echo ""
+	if [ $stashedchanges -eq 1 ]; then
+		echo "  s - Save and quit"
+		echo ""
+	fi
+	echo "  Q - quit"
+	echo ""
+	echo " I want: "
+
+	read decision
+	case $decision in
+		1)
+			property="com.android.traceur";
+			clear
+			echo " System Tracing";
+			changevalue
+		;;
+		2)
+			property="net.oneplus.odm";
+			clear
+			echo " OnePlus logging and bug reporting";
+			changevalue
+		;;
+		3)
+			property="com.oneplus.brickmode";
+			clear
+			echo " Zen Mode";
+			changevalue
+		;;
+		s|S)
+			if [ $stashedchanges == 0 ]; then
+				echo ""
+				echo " Nice try, but there's nothing to save; change some values first!"
+				menu
+			else
+				echo ""
+				echo "" > $finalfile
+				echo "#!/system/bin/sh" > $finalfile
+				echo "sleep 10" >> $finalfile
+				property="com.android.traceur";
+				filewriter
+				property="net.oneplus.odm";
+				filewriter
+				property="com.oneplus.brickmode";
+				filewriter
+				chmod 0755 $finalfile
+				echo " Properties saved, file permissions set to be executable."
+				echo " Do you want to restart your phone now to activate them? (yes/no)"
+				read reboot
+				case $reboot in
+					y|Y|yes|YES)
+						echo " Rebooting in 3 sec"
+						sleep 3
+						reboot
+					;;
+					n|N|no|NO)
+						quit
+					;;
+					*)
+						echo " There's no such option. Yes or no?"
+						sleep 3
+						menu
+					;;
+				esac
+			fi
+		;;
+		q|Q)
+			quit
+		;;
+		*)
+			echo " There's no such option. You can choose 1, 2, 3 or q to quit."
+			sleep 2;
+			menu
+		;;
+	esac
+}
+
+# Chagne the values of the properties
+changevalue() {
+	current=$(get_file_prop $property);
+	echo ""
+	echo " The current setting is: $current."
+	echo " Do you want to change it? (yes/no)"
+	read answer
+	case $answer in
+		y|Y|yes|YES)
+			if [ $current = enabled ]; then
+				set_file_prop $property disabled $prop
+				if [ $? -eq 0 ]; then
+					echo " Successfully changed. Going back to main menu."
+					sleep 2
+					stashedchanges=1;
+					clear
+					menu
+				else
+					echo " Something went wrong. Returning to main menu."
+					sleep 2
+					clear
+					menu
+				fi
+			else
+				set_file_prop $property enabled $prop
+				if [ $? -eq 0 ]; then
+					echo " Successfully changed. Going back to main menu."
+					sleep 2
+					stashedchanges=1;
+					clear
+					menu
+				else
+					echo " Something went wrong, I couldn't save the new value."
+					sleep 2
+					clear
+					menu
+				fi
+			fi
+		;;
+		n|N|no|NO)
+			echo " All right, let's get back to the main menu."
+			sleep 2
+			menu
+		;;
+		*)
+		echo " There's no such option. Yes or no?"
+		changevalue
+	esac
+}
+
+# Write the result in the startup script
+filewriter() {
+	_prop=$(grep "$property=" $prop)
+	value=${_prop#*=}
+	unset _prop
+	case $value in
+		disabled)
+			echo "pm disable-user $property" >> $finalfile
+			echo "From now on $property is disabled."
+			if [ $property = "net.oneplus.odm" ]; then
+				echo "pm disable-user net.oneplus.odm.provider" >> $finalfile
+				echo "From now on net.oneplus.odm.provider is disabled."
+				echo "pm disable-user com.oneplus.opbugreportlite" >> $finalfile
+				echo "From now on com.oneplus.opbugreportlite is disabled."
+			fi
+		;;
+		enabled)
+			echo "pm enable $property" >> $finalfile
+			echo "From now on $property is enabled."
+			if [ $property = "net.oneplus.odm" ]; then
+				echo "pm enable net.oneplus.odm.provider" >> $finalfile
+				echo "From now on net.oneplus.odm.provider is enabled."
+				echo "pm enable com.oneplus.opbugreportlite" >> $finalfile
+				echo "From now on com.oneplus.opbugreportlite is enabled."
+			fi
+		;;
+		*)
+			echo "I found an unsupported value; something is messy here."
+			echo "The system startup script is not updated. Evacuating now."
+			exit
+		;;
+	esac
+}
+
+# Self-explanatory
+quit() {
+  echo ""
+  echo "Exiting now. Good bye!"
+  sleep 2
+  clear
+  exit
+}
+
+# Let's start!
+menu
