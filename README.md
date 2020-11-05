@@ -20,8 +20,8 @@ To play safe, the default values in the opbs.prop file are "enabled".
 1) run 'su'
 2) run 'opbs'
 3) navigate in the menu with the numbers, quit with q
-4) if you changed something a new menu will be shown in the menu, save and quit
-It'll generate an opbatterysaver.sh file in the /data/adb/service.d/ directory, it'll be executed at system start-up.
+4) if you changed something a new menu will be shown in the menu, save and quit  
+It'll generate an opbatterysaver.sh file in the /data/adb/service.d/ directory, that will be executed at system start-up.
 
 ### Requirements
 - a OnePlus phone with its original OS
